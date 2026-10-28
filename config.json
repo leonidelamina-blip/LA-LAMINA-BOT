@@ -1,0 +1,21 @@
+{
+  "prefixo": ".",
+  "donoNome": "Leo",
+  "donos": ["258852223969"],
+  "numeroBot": "258872698781",
+  "fuso": "Africa/Maputo",
+  "pack": "L LAMINA SOMBRIO V20",
+  "ligado": true,
+  "bloquearPVsemGratis": true,
+  "canal": "https://whatsapp.com/channel/0029VbBfoWhAO7RJaD9mXy2k",
+  "contato": "wa.me/258852223969",
+  "apis": {
+    "dl": "https://api.siputzx.my.id/api/d/",
+    "ia": "https://api.siputzx.my.id/api/ai/gpt3?prompt=Responda+em+portugues&content=",
+    "img": "https://api.siputzx.my.id/api/ai/flux?prompt="
+  },
+  "vendas": {
+    "tabela": ["📋 TABELA DE PREÇOS", "Edite aqui em config.json → vendas.tabela"],
+    "pagamento": ["💳 PAGAMENTO", "M-Pesa: 84XXXXXXX", "e-Mola: 86XXXXXXX", "Envie o comprovativo ao dono."]
+  }
+}
