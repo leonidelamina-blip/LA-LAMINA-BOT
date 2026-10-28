@@ -1,0 +1,15 @@
+{
+  "name": "l-lamina-sombrio-v20",
+  "version": "20.0.0",
+  "main": "index.js",
+  "scripts": { "start": "node index.js", "gerar": "node gerar.js" },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^6.7.9",
+    "axios": "^1.7.0",
+    "express": "^4.19.2",
+    "pino": "^9.0.0",
+    "qrcode-terminal": "^0.12.0",
+    "sharp": "^0.33.0",
+    "wa-sticker-formatter": "^4.4.4"
+  }
+}
