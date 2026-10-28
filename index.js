@@ -10,7 +10,10 @@ express().get('/', (_, r) => r.send('👁️ L LÂMINA SOMBRIO V20 online')).lis
 const plugins = new Map(), lista = [];
 function carregar() {
   plugins.clear(); lista.length = 0;
-  for (const f of fs.readdirSync(path.join(__dirname, 'plugins')).filter(x => x.endsWith('.js'))) {
+  const p = path.join(__dirname, 'plugins', f);
+delete require.cache[require.resolve(p)];
+const m = require(p); lista.push(m);
+if (m && m.cmd) {
     const p = path.join(__dirname, 'plugins', f);
     delete require.cache[require.resolve(p)];
     if (m && m.cmd) {
