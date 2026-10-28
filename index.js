@@ -13,7 +13,10 @@ function carregar() {
   for (const f of fs.readdirSync(path.join(__dirname, 'plugins')).filter(x => x.endsWith('.js'))) {
     const p = path.join(__dirname, 'plugins', f);
     delete require.cache[require.resolve(p)];
-    const m = require(p); lista.push(m); m.cmd.forEach(c => plugins.set(c, m));
+    if (m && m.cmd) {
+  const cmds = Array.isArray(m.cmd) ? m.cmd : [m.cmd];
+  cmds.forEach(c => plugins.set(c, m));
+    }
   }
   console.log(`🩸 ${lista.length} plugins carregados`);
 }
