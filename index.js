@@ -104,18 +104,4 @@ async function iniciar() {
     setTimeout(async () => console.log('👁️ CÓDIGO DE PAREAMENTO:', await sock.requestPairingCode(cfg.numeroBot.replace(/\D/g, ''))), 3000);
   sock.ev.on('creds.update', saveCreds);
   sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
-    if (qr && !cfg.numeroBot) qrcode.generate(qr, { small: true });
-    if (connection === 'open') console.log('🩸 Uchiha online');
-    if (connection === 'close') {
-      if (lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut) iniciar();
-      else console.log('Sessão encerrada: apague a pasta auth e reinicie.');
-    }
-  });
-  sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
-    for (const msg of messages) try { await tratar(sock, msg); } catch (e) { console.log('erro:', e.message); }
-  });
-  sock.ev.on('group-participants.update', u => lista.forEach(p => p.onParticipants?.(sock, u)));
-  sock.ev.on('groups.upsert', gs => gs.forEach(g => lista.forEach(p => p.onGrupo?.(sock, g))));
-}
-iniciar();
+    if (qr && !cfg.numeroBot) qrcode.generate(qr, 
