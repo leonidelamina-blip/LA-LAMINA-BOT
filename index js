@@ -1,0 +1,252 @@
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  fetchLatestBaileysVersion,
+  jidNormalizedUser,
+  normalizeMessageContent
+} = require('@whiskeysockets/baileys');
+const pino = require('pino');
+const express = require('express');
+const fs = require('fs');
+const path = require('path');
+
+// ---------- Config (config.js) ----------
+const CFG_PADRAO = {
+  prefixo: '.',
+  donos: ['258852223969', '258872698781'],
+  numeroBot: '258872698781',
+  canal: '',
+  ligado: true
+};
+function carregarConfig() {
+  try {
+    const p = require.resolve('./config');
+    delete require.cache[p];
+    return { ...CFG_PADRAO, ...require(p) };
+  } catch (e) {
+    console.error('Erro ao ler config.js, usando padrão:', e.message);
+    return { ...CFG_PADRAO };
+  }
+}
+
+// ---------- Erros globais (agora com log útil) ----------
+process.on('unhandledRejection', e => console.error('unhandledRejection:', e?.stack || e));
+process.on('uncaughtException', e => console.error('uncaughtException:', e?.stack || e));
+
+// ---------- Servidor HTTP (sem dados pessoais) ----------
+const app = express();
+app.get('/', (_, r) => r.send('L LAMINA V20 ONLINE'));
+app.get('/ping', (_, r) => r.send('pong ' + new Date().toISOString()));
+app.listen(process.env.PORT || 3000, () => console.log('Server HTTP ativo'));
+
+// ---------- Persistência simples dos grupos liberados ----------
+const ARQ_ALUGUEL = path.join(__dirname, 'data', 'aluguel.json');
+function lerAluguel() {
+  try { return new Set(JSON.parse(fs.readFileSync(ARQ_ALUGUEL, 'utf8'))); }
+  catch { return new Set(); }
+}
+function salvarAluguel(set) {
+  try {
+    fs.mkdirSync(path.dirname(ARQ_ALUGUEL), { recursive: true });
+    fs.writeFileSync(ARQ_ALUGUEL, JSON.stringify([...set]));
+  } catch (e) { console.error('Erro ao salvar aluguel:', e.message); }
+}
+const gruposAluguel = lerAluguel();
+global.gruposAluguel = gruposAluguel; // compatível com plugins existentes
+
+// ---------- Plugins ----------
+// Plugin pode ter: cmd, run, dono (true = só dono)
+const plugins = new Map();
+function carregar() {
+  plugins.clear();
+  const pasta = path.join(__dirname, 'plugins');
+  if (!fs.existsSync(pasta)) return;
+  for (const f of fs.readdirSync(pasta).filter(x => x.endsWith('.js'))) {
+    try {
+      const p = path.join(pasta, f);
+      delete require.cache[require.resolve(p)];
+      const m = require(p);
+      if (m?.cmd) (Array.isArray(m.cmd) ? m.cmd : [m.cmd]).forEach(c => plugins.set(c.toLowerCase(), m));
+    } catch (e) {
+      console.error(`Plugin ${f} falhou:`, e.message);
+    }
+  }
+  console.log(`Plugins carregados: ${plugins.size} comandos`);
+}
+
+// ---------- Helpers ----------
+const soNumero = id => String(id || '').split('@')[0].split(':')[0].replace(/\D/g, '');
+
+function verificarDono(msg, sender, cfg) {
+  if (msg.key.fromMe) return true;
+  // donos no config.json devem estar com código do país, ex: 258852223969
+  const donos = (cfg.donos || []).map(d => String(d).replace(/\D/g, '')).filter(Boolean);
+  // inclui IDs alternativos (quando o WhatsApp usa @lid)
+  const candidatos = [sender, msg.key.participantAlt, msg.key.remoteJidAlt]
+    .filter(Boolean)
+    .map(soNumero);
+  return candidatos.some(n => donos.includes(n));
+}
+
+// Rate limit simples: 1 comando a cada 1.5s por usuário
+const ultimoUso = new Map();
+function limitado(id, ms = 1500) {
+  const agora = Date.now();
+  if (agora - (ultimoUso.get(id) || 0) < ms) return true;
+  ultimoUso.set(id, agora);
+  if (ultimoUso.size > 5000) ultimoUso.clear();
+  return false;
+}
+
+// ---------- Conexão ----------
+let sockAtual = null;
+let reconectando = false;
+
+function reconectar() {
+  if (reconectando) return;
+  reconectando = true;
+  setTimeout(() => {
+    reconectando = false;
+    conectar().catch(reconectar);
+  }, 5000);
+}
+
+async function conectar() {
+  if (sockAtual) {
+    try { sockAtual.ev.removeAllListeners(); } catch {}
+    try { sockAtual.end(); } catch {}
+  }
+  if (!fs.existsSync('./auth')) fs.mkdirSync('./auth', { recursive: true });
+
+  const { state, saveCreds } = await useMultiFileAuthState('./auth');
+  const { version } = await fetchLatestBaileysVersion();
+  const cfg = carregarConfig();
+  const botNum = String(cfg.numeroBot || '258872698781').replace(/\D/g, '');
+  const pre = cfg.prefixo || '.';
+
+  const sock = makeWASocket({
+    version,
+    auth: state,
+    logger: pino({ level: 'silent' }),
+    browser: ['Ubuntu', 'Chrome', '20'],
+    keepAliveIntervalMs: 10000,
+    markOnlineOnConnect: false
+  });
+  sockAtual = sock;
+
+  // Pareamento: pede o código quando o socket está pronto (evento qr / connecting)
+  let pareamentoPedido = false;
+  async function pedirPareamento() {
+    if (pareamentoPedido || sock.authState.creds.registered) return;
+    pareamentoPedido = true;
+    try {
+      const code = await sock.requestPairingCode(botNum);
+      console.log(`\nCODIGO DE PAREAMENTO: ${code}\n`);
+    } catch (e) {
+      pareamentoPedido = false;
+      console.error('Erro no pareamento:', e.message);
+    }
+  }
+
+  sock.ev.on('creds.update', saveCreds);
+
+  sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
+    if (qr) pedirPareamento();
+    if (connection === 'open') {
+      console.log(`ONLINE - Bot ${botNum} - ${new Date().toLocaleString()}`);
+    }
+    if (connection === 'close') {
+      const c = lastDisconnect?.error?.output?.statusCode;
+      console.log(`FECHOU ${c} - reconectando...`);
+      if (c !== DisconnectReason.loggedOut) reconectar();
+      else console.log('Sessão encerrada! Apague a pasta auth e pareie de novo.');
+    }
+  });
+
+  sock.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type !== 'notify') return;
+
+    for (const msg of messages) {
+      try {
+        if (!msg.message || msg.key.remoteJid === 'status@broadcast' || !sock.user) continue;
+
+        const jid = msg.key.remoteJid;
+        const sender = jidNormalizedUser(msg.key.participant || jid);
+        const m = normalizeMessageContent(msg.message) || {};
+        const texto =
+          m.conversation ||
+          m.extendedTextMessage?.text ||
+          m.imageMessage?.caption ||
+          m.videoMessage?.caption ||
+          '';
+
+        if (!texto.startsWith(pre)) continue;
+
+        const partes = texto.slice(pre.length).trim().split(/\s+/);
+        const cmd = (partes[0] || '').toLowerCase();
+        if (!cmd) continue;
+
+        const nativos = ['ping', 'aluguel', 'menu'];
+        const plugin = plugins.get(cmd);
+        if (!nativos.includes(cmd) && !plugin) continue; // comando inexistente: ignora
+
+        const isDono = verificarDono(msg, sender, cfg);
+        if (cfg.ligado === false && !isDono) continue; // bot desligado: só o dono usa
+        if (!isDono && limitado(sender)) continue;
+
+        const responder = txt =>
+          sock.sendMessage(jid, { text: Array.isArray(txt) ? txt.join('\n') : txt }, { quoted: msg });
+
+        await sock.sendMessage(jid, { react: { text: '🩸', key: msg.key } }).catch(() => {});
+
+        // ---- Comandos nativos ----
+        if (cmd === 'ping') {
+          const lat = Math.max(0, Date.now() - Number(msg.messageTimestamp) * 1000);
+          await responder(`🤖 Pong! ${lat}ms\nOnline: ${new Date().toLocaleTimeString()}`);
+          continue;
+        }
+
+        if (cmd === 'aluguel') {
+          if (!isDono) { await responder('❌ Só o dono pode usar este comando.'); continue; }
+          gruposAluguel.add(jid);
+          salvarAluguel(gruposAluguel);
+          await responder(`✅ Grupo liberado pelo dono.\n${jid}\nAgora .menu funciona!`);
+          continue;
+        }
+
+        if (cmd === 'menu') {
+          await responder(
+            `╭─❋!°❋🩸 L LAMINA SOMBRIO V20\n` +
+            `│ Dono detectado: ${isDono ? 'SIM ✅' : 'NÃO ❌'}\n` +
+            `│ ${plugins.size + nativos.length} comandos\n` +
+            `╰─❋!°❋🩸` +
+            (cfg.canal ? `\nCanal: ${cfg.canal}` : '')
+          );
+          continue;
+        }
+
+        // ---- Plugins (permissão centralizada) ----
+        if (plugin.dono && !isDono) { await responder('❌ Comando exclusivo do dono.'); continue; }
+        if (plugin.run) {
+          await plugin.run({
+            sock, msg, jid, sender, isDono, cfg,
+            args: partes.slice(1),
+            q: texto.slice(pre.length + cmd.length).trim(),
+            r: responder
+          });
+        }
+      } catch (e) {
+        console.error('Erro ao processar mensagem:', e.message);
+      }
+    }
+  });
+
+  return sock;
+}
+
+// Heartbeat: fora de conectar(), criado uma única vez
+setInterval(() => console.log(`💓 ${new Date().toLocaleTimeString()} - ONLINE`), 600000);
+
+carregar();
+conectar().catch(reconectar);
