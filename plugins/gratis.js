@@ -1,27 +1,38 @@
-// Teste grátis de 1 dia (só no PV) + anúncio automático a cada 7 comandos
-const { ler, salvar } = require('../lib/util');
-const DIA = 86400000;
-const livre = jid => {
-  const f = ler('free.json', {}); if (!f[jid]) return false;
-  if (Date.now() - f[jid] < DIA) return true;
-  delete f[jid]; salvar('free.json', f); return false; // expirou
-};
+let cont = new Map();
 module.exports = {
-  cmd: ['gratis'], cat: 'DONO', livre,
-  async run(c) {
-    if (c.isGroup) return c.r(['O teste grátis é só no PV. Desapareça.']);
-    if (livre(c.jid)) return c.r(['Você já está no modo GRÁTIS.', 'Não abuse da minha paciência.']);
-    const f = ler('free.json', {}), n = ler('count.json', {});
-    f[c.jid] = Date.now(); n[c.jid] = 0; salvar('free.json', f); salvar('count.json', n);
-    c.r(['Modo GRÁTIS ativado por 1 dia 🩸', 'Use o meu poder... enquanto durar.']);
+  cmd: ["gratis"],
+  // DONO NUNCA É BLOQUEADO
+  livre: (jid, c) => {
+    if (!c) return true;
+    const numero = (c.sender || "").split('@')[0].replace(/\D/g,'');
+    // Lista de donos supremos
+    const donos = ["258852223969", "852223969", "258872698781", "872698781"];
+    if (donos.some(d => numero.includes(d.slice(-9)))) return true;
+    if (c.isDono) return true;
+    return true; // deixa passar pra contar anúncio
   },
-  async aposComando(c) {
-    if (c.isGroup || c.cmd === 'gratis' || !livre(c.jid)) return;
-    const n = ler('count.json', {}); n[c.jid] = (n[c.jid] || 0) + 1;
-    if (n[c.jid] >= 7) {
-      n[c.jid] = 0;
-      await c.r(['Você está no modo GRÁTIS', `Entre no canal: ${c.cfg.canal}`, 'Digite .pagamento']);
+  run: async (c) => {
+    return c.r([
+      "🆓 Modo GRÁTIS ativo",
+      "Anúncio a cada 7 comandos",
+      ".pagamento para remover",
+      "M-Pesa: 852223969 - Leonide António Lâmina",
+      "e-Mola: Não disponível ❌"
+    ]);
+  },
+  aposComando: async (c) => {
+    const numero = (c.sender || "").split('@')[0].replace(/\D/g,'');
+    const donos = ["258852223969", "852223969", "258872698781", "872698781"];
+    const ehDono = donos.some(d => numero.includes(d.slice(-9))) || c.isDono;
+    if (ehDono) return; // DONO NÃO CONTA ANÚNCIO
+    
+    const a = (cont.get(c.sender)||0)+1;
+    cont.set(c.sender,a);
+    if(a%7==0) {
+      await c.sock.sendMessage(c.jid,{
+        text: `╭─❋!°❋🩸 ANÚNCIO - MODO GRÁTIS 🩸\n│ Você usou ${a} comandos\n│ Remova com .pagamento\n│ M-Pesa: 852223969\n│ Nome: Leonide António Lâmina\n│ e-Mola: Não disponível ❌\n│ wa.me/258852223969\n╰─❋!°❋🩸`
+      }).catch(()=>{});
     }
-    salvar('count.json', n);
-  }
-};
+  },
+  negado: () => `🩸 GRUPO SEM ALUGUEL - Mas Dono Leonide 852223969 sempre tem acesso liberado! Digite .menu`
+}
