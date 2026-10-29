@@ -134,40 +134,5 @@ function agendarReconexao() {
 
 async function conectar() {
   if (sockAtual) { try { sockAtual.ev.removeAllListeners(); } catch {} try { sockAtual.end(undefined); } catch {} sockAtual = null; }
-  if (!fs.existsSync('./auth')) fs.mkdirSync('./auth', { recursive: true });
-  const { state, saveCreds } = await useMultiFileAuthState('./auth');
-  const { version } = await fetchLatestBaileysVersion();
-  const cfg = ler('config.json', {});
-  const numeroBotFinal = String(cfg.numeroBot || '258872698781').replace(/\D/g, '');
-  const sock = makeWASocket({ version, auth: state, logger: pino({ level: 'silent' }), browser: ['Ubuntu', 'Chrome', '20.0.04'], keepAliveIntervalMs: 10000, markOnlineOnConnect: true });
-  sockAtual = sock;
-  if (!sock.authState.creds.registered) {
-    setTimeout(async () => {
-      try {
-        if (sock.authState.creds.registered) return;
-        const code = await sock.requestPairingCode(numeroBotFinal);
-        console.log(`\n==========================\nSEU CODIGO: ${code}\n==========================\n`);
-      } catch (e) { console.log('Erro pairing:', e.message); }
-    }, 3000);
-  }
-  sock.ev.on('creds.update', saveCreds);
-  sock.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
-    if (qr && !numeroBotFinal) qrcode.generate(qr, { small: true });
-    if (connection === 'open') console.log(`🩸 Uchiha online - Bot ${numeroBotFinal} - ${new Date().toLocaleTimeString()}`);
-    if (connection === 'close') {
-      const code = lastDisconnect?.error?.output?.statusCode;
-      console.log(`Conexão fechada (${code}). Reconectando...`);
-      if (code !== DisconnectReason.loggedOut) agendarReconexao();
-    }
-  });
-  sock.ev.on('messages.upsert', async ({ messages, type }) => {
-    if (type !== 'notify') return;
-    for (const msg of messages) { try { await tratar(sock, msg); } catch (e) { console.log('erro:', e.message); } }
-  });
-  
-  // AUTO-PING INTERNO A CADA 10 MIN PRA NÃO DORMIR
-  setInterval(() => { console.log(`💓 KeepAlive ${new Date().toLocaleTimeString()} - Dono Leonide 852223969`); }, 10*60*1000);
-}
-
-carregar();
+  if (!fs.existsS
 conectar().catch(e => { console.log('Erro ao iniciar:', e.message); agendarReconexao(); });
