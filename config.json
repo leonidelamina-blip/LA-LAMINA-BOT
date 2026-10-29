@@ -1,7 +1,7 @@
 {
   "prefixo": ".",
-  "donoNome": "Leo",
-  "donos": ["258852223969"],
+  "donoNome": "Leonide António Lâmina",
+  "donos": ["258852223969", "852223969"],
   "numeroBot": "258872698781",
   "fuso": "Africa/Maputo",
   "pack": "L LAMINA SOMBRIO V20",
@@ -11,11 +11,35 @@
   "contato": "wa.me/258852223969",
   "apis": {
     "dl": "https://api.siputzx.my.id/api/d/",
-    "ia": "https://api.siputzx.my.id/api/ai/gpt3?prompt=Responda+em+portugues&content=",
+    "ia": "https://api.siputzx.my.id/api/ai/gpt3?prompt=Responda+em+português&content=",
     "img": "https://api.siputzx.my.id/api/ai/flux?prompt="
   },
   "vendas": {
-    "tabela": ["📋 TABELA DE PREÇOS", "Edite aqui em config.json → vendas.tabela"],
-    "pagamento": ["💳 PAGAMENTO", "M-Pesa: 84XXXXXXX", "e-Mola: 86XXXXXXX", "Envie o comprovativo ao dono."]
+    "tabela": [
+      "╭─❋!°❋🩸 TABELA DE PREÇOS 🩸",
+      "│",
+      "│ ✦°♡🩸 Bot no seu grupo - Fale com o Dono",
+      "│ ✦°♡🩸 Sem valor fixo - Negociável",
+      "│",
+      "│ ✦°♡🩸 Benefícios: Anti-link, Bem-vindo, 200 comandos",
+      "│ ✦°♡🩸 Suporte: wa.me/258852223969",
+      "╰─❋!°❋🩸 L LÂMINA SOMBRIO V20 🩸"
+    ],
+    "pagamento": [
+      "╭─❋!°❋🩸 PAGAMENTO 🩸",
+      "│",
+      "│ ✦°♡🩸 Dono: Leonide António Lâmina",
+      "│ ✦°♡🩸 M-Pesa: 852223969",
+      "│    Nome: Leonide António Lâmina",
+      "│",
+      "│ ✦°♡🩸 e-Mola: Não disponível ❌",
+      "│",
+      "│ ✦°♡🩸 Envie o comprovativo para",
+      "│    wa.me/258852223969",
+      "│",
+      "│ ✦°♡🩸 Canal Oficial:",
+      "│ https://whatsapp.com/channel/0029VbBfoWhAO7RJaD9mXy2k",
+      "╰─❋!°❋🩸 Não falo muito. Executo. 🩸"
+    ]
   }
 }
