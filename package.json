@@ -1,0 +1,21 @@
+{
+  "name": "sasuke-shadow-god",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SASUKE — SHADOW GOD | CORE 77 WhatsApp bot project",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "check": "node --check index.js && node --check config.js && node --check database/database.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "latest",
+    "dotenv": "^16.4.7",
+    "pino": "^9.6.0",
+    "sql.js": "^1.13.0"
+  }
+}
