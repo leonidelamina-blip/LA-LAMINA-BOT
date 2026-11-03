@@ -1,0 +1,27 @@
+{
+  "nomeBot": "SASUKE BOT",
+  "versao": "V20",
+  "numeroBot": "258872698781",
+  "numeroDono": "258852223969",
+  "nomeDono": "Leo",
+  "donos": [
+    "258852223969",
+    "852223969",
+    "258872698781",
+    "872698781"
+  ],
+  "prefixo": ".",
+  "canal": "https://whatsapp.com/channel/0029VbBfoWhAO7RJaD9mXy2k",
+  "imagemMenu": "https://i.ibb.co/5g8GqZx/sasuke.jpg",
+  "imagemBot": "https://i.ibb.co/5g8GqZx/sasuke.jpg",
+  "imagemDono": "https://i.ibb.co/5g8GqZx/sasuke.jpg",
+  "maxSessoes": 20,
+  "pagamento": {
+    "mpesa": "852223969",
+    "nome": "Leo"
+  },
+  "donosLid": [],
+  "senha_ban": "",
+  "fauto": false,
+  "urlBase": ""
+}
